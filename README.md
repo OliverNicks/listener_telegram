@@ -1,13 +1,13 @@
 # Telegram Listener & Fast Intent Classifier
 
-Lightweight, sub-15ms social listening pipeline for Telegram parent chats. Combines fast lexical prefiltering, an ONNX bi-encoder (`paraphrase-multilingual-MiniLM-L12-v2`), and local ChromaDB retrieval to surface commercial buyer inquiries and draft replies.
+Lightweight, social listening pipeline for Telegram parent chats. Combines fast lexical prefiltering, an ONNX bi-encoder (`paraphrase-multilingual-MiniLM-L12-v2`), and local ChromaDB retrieval to surface commercial buyer inquiries and draft replies.
 
 ---
 
 ## Key Features
 
 * **Sub-Millisecond Prefilter**: Drops 90%+ irrelevant traffic via Ukrainian lexical stems before invoking the neural net.
-* **Low-Latency Inference**: ONNX Runtime engine running mean-pooled sentence embeddings on single-core CPU.
+* **Low-Latency Inference**: ONNX Runtime engine running mean-pooled sentence embeddings on CPU.
 * **Matrix Cosine Matching**: Anchor-based intent matching with heuristic lexical bias calibration.
 * **Catalog RAG**: ChromaDB vector index matching user queries against store products and deep links.
 
