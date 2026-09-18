@@ -53,6 +53,7 @@ Lightweight, sub-15ms social listening pipeline for Telegram parent chats. Combi
 
 ## Directory Layout
 
+```text
 help_project/
 ├── bots/
 │   ├── bot_a/               # Question seeder
@@ -66,7 +67,9 @@ help_project/
 │   └── ingest.py            # Vector DB builder
 ├── src/                     # Core classifier & retriever modules
 └── tests/                   # Integration and latency tests
+```
 
+---
 
 ## Quickstart
 ### 1. Setup Environment
