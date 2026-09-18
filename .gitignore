@@ -1,0 +1,29 @@
+﻿# Environment variables & secrets
+.env
+.env.*
+!.env.example
+
+# Telegram MTProto session files
+*.session
+*.session-journal
+sessions/
+fb_session/
+
+# Databases & vector indexes
+data/chroma_catalog_db/
+*.db
+*.sqlite3
+
+# Large ONNX binary weights (track via Git LFS or external download)
+models/onnx_model/*.onnx
+
+# Python cache & virtual environments
+__pycache__/
+*.py[cod]
+*.class
+.venv/
+venv/
+
+.vscode/
+
+models/*.onnx
