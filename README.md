@@ -1,15 +1,22 @@
 # Telegram Listener & Fast Intent Classifier
 
-Lightweight, sub-15ms social listening pipeline for Telegram parent chats. Combines fast lexical prefiltering, an ONNX bi-encoder (`paraphrase-multilingual-MiniLM-L12-v2`), and local ChromaDB retrieval to surface commercial buyer inquiries and draft replies.
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
+[![Inference](https://img.shields.io/badge/Inference-ONNX%20Runtime%20(CPU)-green.svg)](https://onnxruntime.ai/)
+[![Vector DB](https://img.shields.io/badge/Vector%20Store-ChromaDB-orange.svg)](https://www.trychroma.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+High-throughput, lightweight social listening and buyer-intent classification pipeline for Telegram group chats. 
+
+Combines a deterministic sub-millisecond lexical prefilter, a CPU-optimized ONNX bi-encoder (`paraphrase-multilingual-MiniLM-L12-v2`), and local ChromaDB vector retrieval to identify commercial purchasing intent in real time and generate context-aware product recommendations.
 
 ---
 
-## Key Features
+## Key Features & Benchmarks
 
-* **Sub-Millisecond Prefilter**: Drops 90%+ irrelevant traffic via Ukrainian lexical stems before invoking the neural net.
-* **Low-Latency Inference**: ONNX Runtime engine running mean-pooled sentence embeddings on single-core CPU.
-* **Matrix Cosine Matching**: Anchor-based intent matching with heuristic lexical bias calibration.
-* **Catalog RAG**: ChromaDB vector index matching user queries against store products and deep links.
+* **Sub-Millisecond Lexical Gate:** Discards **90%+ of irrelevant chatter** via optimized Ukrainian lexical stem sets before invoking neural networks, keeping CPU overhead minimal.
+* **Low-Latency CPU Inference:** Quantized / CPU-optimized ONNX Runtime engine executing mean-pooled sentence embeddings in **< 15 ms**.
+* **Calibrated Intent Matching:** Anchor-based cosine similarity matrix combined with domain-specific heuristic lexical bias scoring.
+* **Catalog RAG Pipeline:** Semantic retrieval via a local ChromaDB vector index, mapping unstructured buyer requests directly to SKU deep links and catalog availability.
 
 ---
 
@@ -53,38 +60,70 @@ Lightweight, sub-15ms social listening pipeline for Telegram parent chats. Combi
 
 ## Directory Layout
 
+```text
 help_project/
 ├── bots/
-│   ├── bot_a/               # Question seeder
-│   ├── bot_b/listener.py    # Main listener daemon
-│   └── auth/login.py        # Telethon session generator
-├── config/                  # Keyword dictionaries
-├── data/                    # CSV catalogs & vector DB
-├── models/                  # ONNX weights & tokenizer config
+│   ├── bot_a/               # Question seeding module
+│   ├── bot_b/listener.py    # Main asynchronous listener daemon
+│   └── auth/login.py        # Telethon MTProto session generator
+├── config/                  # Lexical filters & keyword dictionaries
+├── data/                    # Product catalogs (CSV) & vector store files
+├── models/                  # ONNX weights & tokenizer configurations
 ├── scripts/
-│   ├── download_model.py    # Asset fetcher
-│   └── ingest.py            # Vector DB builder
-├── src/                     # Core classifier & retriever modules
-└── tests/                   # Integration and latency tests
+│   ├── download_model.py    # Model weights & tokenizer asset fetcher
+│   └── ingest.py            # Vector database ingestion pipeline
+├── src/                     # Core classifier, embedding, and retriever modules
+└── tests/                   # Unit, integration, and latency benchmark tests
 
+```
+---
 
-## Quickstart
-### 1. Setup Environment
+## Quickstart 
 
-git clone https://github.com/OliverNicks/listener_telegram.git
+## Option A: Local Installation
+
+### 1. Clone & Set Up Environment:
+
+```bash
+git clone [https://github.com/OliverNicks/listener_telegram.git](https://github.com/OliverNicks/listener_telegram.git)
 cd listener_telegram
+
 python -m venv venv
-.\venv\Scripts\activate
+# Linux / macOS:
+source venv/bin/activate
+# Windows:
+# .\venv\Scripts\activate
+
+pip install --upgrade pip
 pip install -r requirements.txt
+```
 
+### 2. Download Weights & Ingest Catalog:
 
-### 2. Download Model & Ingest Data
-
+```bash
 python scripts/download_model.py
 python scripts/ingest.py
+```
 
-### 3. Authenticate & Run
+### 3. Configure Credentials & Authenticate:
 
-cp .env.example .env          # Add your Telegram & OpenAI credentials
-python bots/auth/login.py      # Authenticate MTProto session
-python -m bots.bot_b.listener  # Start listener
+```bash
+cp .env.example .env
+# Edit .env with your TELEGRAM_API_ID, TELEGRAM_API_HASH, and related secrets
+
+python bots/auth/login.py
+```
+
+### 4. Run Tests & Start Service:
+```bash
+pytest tests/ -v
+python -m bots.bot_b.listener
+```
+
+## Option B: Docker Setup
+
+```bash
+cp .env.example .env
+docker compose build
+docker compose up -d
+```
