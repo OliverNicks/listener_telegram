@@ -61,6 +61,7 @@ Combines a deterministic sub-millisecond lexical prefilter, a CPU-optimized ONNX
 ## Directory Layout
 
 ```text
+```text
 help_project/
 ├── bots/
 │   ├── bot_a/               # Question seeding module
@@ -70,10 +71,10 @@ help_project/
 ├── data/                    # Product catalogs (CSV) & vector store files
 ├── models/                  # ONNX weights & tokenizer configurations
 ├── scripts/
-│   ├── download_model.py    # Model weights & tokenizer asset fetcher
-│   └── ingest.py            # Vector database ingestion pipeline
-├── src/                     # Core classifier, embedding, and retriever modules
-└── tests/                   # Unit, integration, and latency benchmark tests
+│   ├── download_model.py    # Asset fetcher
+│   └── ingest.py            # Vector DB builder
+├── src/                     # Core classifier & retriever modules
+└── tests/                   # Integration and latency tests
 
 ```
 ---
