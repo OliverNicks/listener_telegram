@@ -16,7 +16,7 @@ Combines a deterministic sub-millisecond lexical prefilter, a CPU-optimized ONNX
 * **Sub-Millisecond Lexical Gate:** Discards **90%+ of irrelevant chatter** via optimized Ukrainian lexical stem sets before invoking neural networks, keeping CPU overhead minimal.
 * **Low-Latency CPU Inference:** Quantized / CPU-optimized ONNX Runtime engine executing mean-pooled sentence embeddings in **< 15 ms**.
 * **Calibrated Intent Matching:** Anchor-based cosine similarity matrix combined with domain-specific heuristic lexical bias scoring.
-* **Catalog RAG Pipeline:** Semantic retrieval via a local ChromaDB vector index, mapping unstructured buyer requests directly to SKU deep links and catalog availability.
+* **Catalog RAG Pipeline:** Semantic retrieval via a local ChromaDB vector index, mapping unstructured buyer requests directly to catalog category links.
 
 ---
 
