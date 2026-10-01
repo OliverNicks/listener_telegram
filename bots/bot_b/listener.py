@@ -1,25 +1,39 @@
 import asyncio
 import os
 import random
+import sys
 import time
+from pathlib import Path
+
 from dotenv import load_dotenv
-from src.drafter import draft_peer_recommendation
-from src.classifier import IntentClassifier
-from src.prefilter import find_keywords
+
+# Ensure project root is in sys.path so the bot can be run from any directory
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 from telethon import TelegramClient, events
 from telethon.errors import FloodWaitError
 
-load_dotenv()
+from src.catalog import CategoryCatalog
+from src.classifier import IntentClassifier
+from src.drafter import draft_peer_recommendation
+from src.logger import logger
+from src.prefilter import find_keywords
+
+load_dotenv(PROJECT_ROOT / ".env")
 
 # Configuration & Secrets
-session_name = "listener_session"
+session_name = str(PROJECT_ROOT / "listener_session")
 API_ID = int(os.getenv("TG_API_ID"))
 API_HASH = os.getenv("TG_API_HASH")
-TARGET_CHAT_ID = int(os.getenv("TARGET_CHAT_ID", -5511274738))
-COOLDOWN_SECONDS = int(os.getenv("THROTTLE_COOLDOWN_SECONDS", 300))
+TARGET_CHAT_ID = int(os.getenv("TARGET_CHAT_ID", "-5511274738"))
+COOLDOWN_SECONDS = int(os.getenv("THROTTLE_COOLDOWN_SECONDS", "300"))
 
 last_sent_time = {}  # Maps chat_id -> timestamp
 client = TelegramClient(session_name, API_ID, API_HASH)
+
+
 
 EXCLUDE_KEYWORDS = ["обмін", "обміняю", "обмен", "меняю"]
 
@@ -70,123 +84,181 @@ SELLER_ANCHORS = [
     "Пролет с размером, отдам абсолютно новый комбинезон с бирками.",
 ]
 
-print("⏳ Initializing classifier...")
+
+MODEL_PATH = PROJECT_ROOT / "models" / "model.onnx"
+TOKENIZER_PATH = PROJECT_ROOT / "models" / "tokenizer.json"
+CHROMA_DIR = PROJECT_ROOT / "data" / "chroma_catalog_db"
+if not CHROMA_DIR.exists():
+    CHROMA_DIR = PROJECT_ROOT / "chroma_catalog_db"
+
+logger.info("Initializing classifier...", model_path=str(MODEL_PATH))
 classifier = IntentClassifier(
-    model_path=r"models\model.onnx",
-    tokenizer_path=r"models\tokenizer.json",
+    model_path=str(MODEL_PATH),
+    tokenizer_path=str(TOKENIZER_PATH),
     buyer_anchors=SHOPPING_ANCHORS,
     seller_anchors=SELLER_ANCHORS,
     threshold=0.55,
 )
-print("✅ Ready!")
+logger.info("Classifier ready")
+logger.info("Initializing Chroma catalog...", collection="best4baby_categories", persist_dir=str(CHROMA_DIR))
+
+# Initialize catalog
+catalog = CategoryCatalog(
+    persist_dir=str(CHROMA_DIR),
+    collection_name="best4baby_categories",
+)
+logger.info("Catalog ready")
 
 
 @client.on(events.NewMessage(chats=[TARGET_CHAT_ID]))
 async def message_handler(event):
-  if event.out:
-    return
+    if event.out:
+        return
 
-  chat_id = event.chat_id
-  now = time.time()
+    chat_id = event.chat_id
+    now = time.time()
 
-  # Check chat-level cooldown
-  if (
-      chat_id in last_sent_time
-      and (now - last_sent_time[chat_id]) < COOLDOWN_SECONDS
-  ):
-    remaining = int(COOLDOWN_SECONDS - (now - last_sent_time[chat_id]))
-    print(f"⏳ Cooldown active for chat {chat_id}. Skipping ({remaining}s left).")
-    return
+    log = logger.bind(
+        chat_id=chat_id,
+        user_id=event.sender_id,
+        msg_id=event.id
+    )
 
-  raw_text = event.raw_text or ""
-  normalized_text = raw_text.lower()
-
-  if any(word in normalized_text for word in EXCLUDE_KEYWORDS):
-    print("⛔ Trade/Exchange detected. Ignoring.")
-    return
-
-  matches = find_keywords(normalized_text)
-
-  if matches:
-    print(f"🎯 Match detected {matches}: {normalized_text}")
-    (
-        is_buyer,
-        is_seller,
-        buy_score,
-        sell_score,
-        best_buy_anchor,
-        best_sell_anchor,
-    ) = classifier.predict(normalized_text)
-
-    if is_buyer:
-      # Lock cooldown slot immediately to prevent duplicate triggers during sleep
-      last_sent_time[chat_id] = time.time()
-
-      print(
-          f"🛍️ Shopping inquiry confirmed (buy score: {buy_score:.4f}, sell"
-          f" score: {sell_score:.4f})"
-      )
-      print(f'👤 User: {event.sender_id} | Message: "{raw_text}"')
-
-      # 1. Generate LLM draft using original casing
-      peer_draft = draft_peer_recommendation(raw_text)
-      reply_text = peer_draft.reply_draft
-
-      # 2. Simulate human reading/typing delay
-      delay = random.uniform(10, 25)
-      print(f"⏳ Waiting {delay:.1f}s before sending reply:\n{reply_text}")
-      await asyncio.sleep(delay)
-
-      # 3. Dispatch reply with FloodWait handling
-      try:
-        await client.send_message(
-            chat_id, reply_text, reply_to=event.message.id
+    # Check chat-level cooldown
+    if (
+        chat_id in last_sent_time
+        and (now - last_sent_time[chat_id]) < COOLDOWN_SECONDS
+    ):
+        remaining = int(COOLDOWN_SECONDS - (now - last_sent_time[chat_id]))
+        log.warning(
+            "Cooldown active, skipping message",
+            remaining_seconds=remaining,
+            cooldown_seconds=COOLDOWN_SECONDS
         )
-        last_sent_time[chat_id] = time.time()
-        print("🚀 Message sent successfully!")
+        return
 
-      except FloodWaitError as e:
-        print(f"⚠️ Telegram FloodWait triggered! Sleep required: {e.seconds}s.")
-        last_sent_time[chat_id] = time.time() + e.seconds
+    raw_text = event.raw_text or ""
+    normalized_text = raw_text.lower()
 
-        if e.seconds <= 60:
-          print(f"⏳ Sleeping {e.seconds}s before retrying...")
-          await asyncio.sleep(e.seconds)
-          try:
-            await client.send_message(
-                chat_id, reply_text, reply_to=event.message.id
-            )
+    if any(word in normalized_text for word in EXCLUDE_KEYWORDS):
+        log.info("Message skipped: trade/exchange detected")
+        return
+
+    matches = find_keywords(normalized_text)
+
+    t_start = time.perf_counter()
+
+    if matches:
+        (
+            is_buyer,
+            is_seller,
+            buy_score,
+            sell_score,
+            best_buy_anchor,
+            best_sell_anchor,
+        ) = classifier.predict(normalized_text)
+
+        classify_latency = round((time.perf_counter() - t_start) * 1000, 2)
+
+        # Logging the intent-classification time
+        log.info(
+            "Intent classified",
+            is_buyer=is_buyer,
+            is_seller=is_seller,
+            buy_score=round(buy_score, 4),
+            sell_score=round(sell_score, 4),
+            latency_ms=classify_latency,
+            matched_keywords=matches,
+        )
+
+        if is_buyer:
+            # Lock cooldown slot immediately to prevent duplicate triggers during sleep
             last_sent_time[chat_id] = time.time()
-            print("🚀 Message sent successfully on retry!")
-          except Exception as retry_err:
-            print(f"❌ Retry failed: {retry_err}")
+
+            log.info(
+                "Buyer inquiry confirmed",
+                buy_score=round(buy_score, 4),
+                sell_score=round(sell_score, 4),
+                raw_message=raw_text,
+            )
+
+            # Measuring catalogue resolution
+            t_cat = time.perf_counter()
+            target_url = catalog.resolve_url(raw_text)
+            cat_latency = round((time.perf_counter() - t_cat) * 1000, 2)
+
+            log.info(
+                "Resolved product category URL",
+                target_url=target_url,
+                latency_ms=cat_latency,
+            )
+
+            # 1. Generate LLM draft using original casing
+            t_llm = time.perf_counter()
+            peer_draft = draft_peer_recommendation(raw_text, store_link=target_url)
+            llm_latency = round((time.perf_counter() - t_llm) * 1000, 2)
+            log.info("Draft generated successfully", latency_ms=llm_latency)
+
+            reply_text = peer_draft.reply_draft
+
+            # 2. Simulate human reading/typing delay
+            wait_time = random.uniform(180, 360)
+            log.info(
+                "Simulating reading/typing delay before sending reply",
+                delay_seconds=round(wait_time, 1),
+                reply_preview=reply_text[:100] + "..." if len(reply_text) > 100 else reply_text,
+            )
+            await asyncio.sleep(wait_time)
+
+            # 3. Dispatch reply with FloodWait handling
+            try:
+                await client.send_message(
+                    chat_id, reply_text, reply_to=event.message.id
+                )
+                last_sent_time[chat_id] = time.time()
+                log.info("Reply message sent successfully")
+
+            except FloodWaitError as e:
+                log.error("Telegram FloodWait hit", wait_seconds=e.seconds)
+                last_sent_time[chat_id] = time.time() + e.seconds
+
+                if e.seconds <= 60:
+                    log.warning("Sleeping before retry", retry_delay_seconds=e.seconds)
+                    await asyncio.sleep(e.seconds)
+                    try:
+                        await client.send_message(
+                            chat_id, reply_text, reply_to=event.message.id
+                        )
+                        last_sent_time[chat_id] = time.time()
+                        log.info("Reply message sent successfully on retry")
+                    except Exception as retry_err:
+                        log.error("Retry failed", error=str(retry_err))
+                else:
+                    log.warning(
+                        "FloodWait duration too long. Dropping reply to protect session.",
+                        wait_seconds=e.seconds,
+                    )
+
+            except Exception:
+                log.exception("Unexpected error while processing buyer inquiry")
+
+        elif is_seller:
+            log.info(
+                "Seller inquiry detected",
+                buy_score=round(buy_score, 4),
+                sell_score=round(sell_score, 4),
+                best_buy_anchor=best_buy_anchor,
+                best_sell_anchor=best_sell_anchor,
+            )
+
         else:
-          print("⏭️ Wait too long. Dropping to protect session.")
-
-      except Exception as err:
-        print(f"❌ Failed to send message: {err}")
-
-    elif is_seller:
-      print(
-          f"🪝 Seller inquiry confirmed (buy: {buy_score:.4f}, sell:"
-          f" {sell_score:.4f})"
-      )
-      print(
-          f"Best buy anchor: {best_buy_anchor}\nBest sell anchor:"
-          f" {best_sell_anchor}"
-      )
-
-    else:
-      print(
-          "❌ Neither meets threshold\n(buy score:"
-          f" {buy_score:.4f}, sell score: {sell_score:.4f})"
-      )
-      print(
-          f"Best buy anchor: {best_buy_anchor}\nBest sell anchor:"
-          f" {best_sell_anchor}"
-      )
-
-  print("-" * 75)
+            log.debug(
+                "Threshold not met",
+                buy_score=round(buy_score, 4),
+                sell_score=round(sell_score, 4),
+                best_buy_anchor=best_buy_anchor,
+                best_sell_anchor=best_sell_anchor,
+            )
 
 
 with client:

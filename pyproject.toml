@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "listener_telegram"
+version = "0.1.0"
+description = "High-throughput social listening and buyer-intent classification pipeline for Telegram"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-v"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = [
+    "E501",  # Line too long (prompts and NLP anchors)
+    "E402",  # Module level import not at top of file (dynamic sys.path insertion)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["src", "bots"]

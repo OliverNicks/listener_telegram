@@ -4,9 +4,9 @@ Fetches the ONNX model graph and HuggingFace fast-tokenizer files
 from the official sentence-transformers repository.
 """
 
-from pathlib import Path
 import sys
 import urllib.request
+from pathlib import Path
 
 MODEL_REPO_BASE = (
     "https://huggingface.co/sentence-transformers/"

@@ -1,10 +1,11 @@
 import asyncio
 import os
 import random
+
 from dotenv import load_dotenv
+from question_generator import generate_parent_question
 from telethon import TelegramClient
 from telethon.errors import FloodWaitError
-from question_generator import generate_parent_question
 
 load_dotenv()
 
@@ -19,7 +20,7 @@ TARGET_CHAT = os.getenv("TARGET_CHAT_USERNAME")
 async def post_question():
     client = TelegramClient("account_a_session", API_ID, API_HASH)
     await client.start()
-    
+
     me = await client.get_me()
     print(f"Logged in as Account A: {me.first_name} (@{me.username})")
 

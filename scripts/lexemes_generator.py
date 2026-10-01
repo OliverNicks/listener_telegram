@@ -184,7 +184,6 @@ all_keywords = expand_words(uk_lemmas_to_add, morph_uk) | expand_words(
 clean_keywords = {w for w in all_keywords if len(w) > 2}
 
 with open("keywords_to_add.txt", "w", encoding="utf-8") as f:
-  for word in sorted(clean_keywords):
-    f.write(f"{word}\n")
+  f.writelines(f"{word}\n" for word in sorted(clean_keywords))
 
 print(f"Generated {len(clean_keywords)} unique keyword forms into keywords.txt")

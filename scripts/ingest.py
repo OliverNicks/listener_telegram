@@ -1,9 +1,9 @@
+
 import pandas as pd
-from langchain_core.documents import Document
-import os
-from langchain_cohere import CohereEmbeddings
-from langchain_chroma import Chroma
 from dotenv import load_dotenv
+from langchain_chroma import Chroma
+from langchain_cohere import CohereEmbeddings
+from langchain_core.documents import Document
 
 load_dotenv()
 

@@ -1,4 +1,4 @@
-﻿# Environment variables & secrets
+# Environment variables & secrets
 .env
 .env.*
 !.env.example
@@ -10,20 +10,45 @@ sessions/
 fb_session/
 
 # Databases & vector indexes
-data/chroma_catalog_db/
 *.db
 *.sqlite3
+chroma_catalog_db/
+data/chroma_catalog_db/
 
-# Large ONNX binary weights (track via Git LFS or external download)
-models/onnx_model/*.onnx
+# Large ONNX binary weights (download via scripts/download_model.py)
+*.onnx
+*.onnx_data
+models/*.onnx
 
 # Python cache & virtual environments
 __pycache__/
 *.py[cod]
-*.class
+*$py.class
 .venv/
 venv/
+env/
+ENV/
+build/
+dist/
+*.egg-info/
 
+# Testing & Linting cache
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# IDE & Editor files
 .vscode/
+.idea/
+*.swp
+*.swo
 
-models/*.onnx
+# OS generated files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Logs
+logs/
+*.log

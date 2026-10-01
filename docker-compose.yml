@@ -1,0 +1,32 @@
+services:
+  telegram-listener:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: telegram_listener_bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      # 1. Mount ONNX weights from host (avoids baking 470MB into image)
+      - ./models:/app/models:ro
+
+      # 2. Persist ChromaDB vector store
+      - ./data:/app/data
+
+      # 3. Persist log files on the host machine
+      - ./logs:/app/logs
+
+      # 4. Persist Telegram login session so re-authentication isn't needed
+      - ./listener_session.session:/app/listener_session.session
+
+    # Enable interactive terminal in case Telegram asks for a login code
+    stdin_open: true
+    tty: true
+
+    # Optional: protect host resources
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2048M

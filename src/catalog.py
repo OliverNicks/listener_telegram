@@ -1,4 +1,3 @@
-import os
 from dotenv import load_dotenv
 from langchain_chroma import Chroma
 from langchain_cohere import CohereEmbeddings
@@ -47,7 +46,6 @@ class CategoryCatalog:
     def resolve_url(
           self, query_text: str, min_score: float = SIMILARITY_THRESHOLD) -> str:
         """Finds the most relevant subcategory URL using similarity_search_with_relevance_scores.
-
         Returns the specific page_url if score >= min_score, else the root site
         URL.
         """
@@ -69,7 +67,7 @@ class CategoryCatalog:
 
             if score >= min_score:
               return clean_url
-            
+
             print(
                 f"⚠️ Score {score:.4f} is below threshold {min_score}. Falling back"
                 f" to {DEFAULT_SITE_URL}."

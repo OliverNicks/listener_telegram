@@ -1,0 +1,34 @@
+# Git & CI
+.git
+.github
+.gitignore
+
+# Python & Virtual Environments
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.venv
+venv
+.pytest_cache
+.ruff_cache
+
+# Environment secrets & local sessions (mounted via compose instead)
+.env
+.env.*
+*.session
+*.session-journal
+sessions/
+fb_session/
+
+# Logs & temporary files
+logs/
+*.log
+
+# Large local models (mounted as volume or downloaded)
+models/*.onnx
+
+# Testing & Editor files
+tests/
+.vscode/
+.idea/
